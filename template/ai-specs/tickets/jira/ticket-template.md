@@ -1,47 +1,47 @@
-# Template de ticket de Jira (para usar con `/implement`)
+# Jira ticket template (for use with `/implement`)
 
-Copiá este esqueleto en la descripción del ticket de Jira. Está pensado como el "negativo"
-de lo que pide el flujo OpenSpec: cada sección alimenta directamente un artefacto que genera
-`/implement` (ver `.claude/commands/implement.md`), así los `proposal.md` / `design.md` /
-`specs/` salen con menos idas y vueltas.
+Copy this skeleton into the Jira ticket description. It is designed as the "negative"
+of what the OpenSpec flow asks for: each section feeds directly into an artifact that
+`/implement` generates (see `.claude/commands/implement.md`), so the `proposal.md` /
+`design.md` / `specs/` come out with less back-and-forth.
 
-Cuanto más completas las secciones, mejores los artefactos. Las que no apliquen, dejalas
-con "N/A" en vez de borrarlas (sirve para dejar explícito que se evaluaron).
-
----
-
-## Contexto / Problema
-<!-- 1-3 frases: qué problema resuelve y por qué ahora. Alimenta el "Why" del proposal. -->
-
-## Qué se quiere (alcance)
-<!-- Cambios concretos en bullets: nuevos endpoints, modificaciones, remociones.
-     Marcar con **BREAKING** lo que rompa compatibilidad. Alimenta "What Changes". -->
--
-
-## Criterios de aceptación
-<!-- Condiciones verificables. Cada una se vuelve un Scenario WHEN/THEN en el spec.
-     Redactá en términos de comportamiento observable, no de implementación. -->
-- [ ]
-- [ ]
-
-## Fuera de alcance (Non-goals)
-<!-- Lo que explícitamente NO entra en este ticket. Evita scope creep en los artefactos. -->
--
-
-## Notas técnicas / integraciones
-<!-- Endpoints y payloads de ejemplo, plataformas/módulos afectados, conexiones de DB,
-     y datos de prueba concretos (ej. "usar orden 1215"). Alimenta el design. -->
--
-
-## Dependencias / riesgos
-<!-- Tickets relacionados, servicios externos, flags de config, y riesgos conocidos. -->
--
+The more complete the sections, the better the artifacts. For the ones that don't apply,
+leave them as "N/A" instead of deleting them (it makes explicit that they were considered).
 
 ---
 
-### Sugerencias de redacción
-- Un ticket = un objetivo. Si hay varios objetivos independientes, conviene partirlo.
-- Los criterios de aceptación son lo más valioso para `/implement`: se traducen casi 1:1 a
-  los scenarios del `spec.md`.
-- Si el ticket toca convenciones del repo (rutas, colas, jobs programados, conexiones de DB),
-  mencionalo en "Notas técnicas" — el comando ancla los artefactos a `CLAUDE.md`.
+## Context / Problem
+<!-- 1-3 sentences: what problem it solves and why now. Feeds the "Why" of the proposal. -->
+
+## What is wanted (scope)
+<!-- Concrete changes as bullets: new endpoints, modifications, removals.
+     Mark anything that breaks compatibility with **BREAKING**. Feeds "What Changes". -->
+-
+
+## Acceptance criteria
+<!-- Verifiable conditions. Each one becomes a WHEN/THEN Scenario in the spec.
+     Phrase them in terms of observable behavior, not implementation. -->
+- [ ]
+- [ ]
+
+## Out of scope (Non-goals)
+<!-- What explicitly does NOT belong in this ticket. Prevents scope creep in the artifacts. -->
+-
+
+## Technical notes / integrations
+<!-- Example endpoints and payloads, affected platforms/modules, DB connections,
+     and concrete test data (e.g. "use order 1215"). Feeds the design. -->
+-
+
+## Dependencies / risks
+<!-- Related tickets, external services, config flags, and known risks. -->
+-
+
+---
+
+### Writing tips
+- One ticket = one objective. If there are several independent objectives, split it.
+- Acceptance criteria are the most valuable part for `/implement`: they translate almost 1:1
+  into the scenarios in `spec.md`.
+- If the ticket touches repo conventions (routes, queues, scheduled jobs, DB connections),
+  mention it in "Technical notes" — the command anchors the artifacts to `CLAUDE.md`.
