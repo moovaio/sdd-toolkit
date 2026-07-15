@@ -1,0 +1,27 @@
+{
+  "name": "@moova/sdd-toolkit",
+  "version": "0.1.0",
+  "description": "Moova's Spec-Driven Development toolkit — agents, skills and commands for the OpenSpec workflow, importable into any repo with one command.",
+  "keywords": [
+    "claude",
+    "openspec",
+    "spec-driven-development",
+    "sdd",
+    "ai",
+    "coding-agent",
+    "moova"
+  ],
+  "license": "UNLICENSED",
+  "private": false,
+  "author": "Moova",
+  "bin": {
+    "sdd": "./bin/init.js"
+  },
+  "files": [
+    "bin/",
+    "template/"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
