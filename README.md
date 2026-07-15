@@ -4,6 +4,16 @@ Moova's **Spec-Driven Development** toolkit. It bundles the agents, skills and s
 commands for the OpenSpec workflow so any repo can share the exact same setup, and
 pull updates centrally when the toolkit changes.
 
+## Prerequisites
+
+- **Node >= 18** (to run the installer via `npx`).
+- **OpenSpec CLI** — the OpenSpec commands this toolkit ships need it installed. See the docs at
+  <https://openspec.dev/>, or install it directly:
+
+  ```bash
+  npm install -g @fission-ai/openspec@latest
+  ```
+
 ## What it ships
 
 | Category | Assets |
@@ -68,9 +78,6 @@ your-repo/
 - **New agent tool** (e.g. Cursor): add an entry to `AGENT_TOOLS` in `bin/init.js`
   mapping the tool's dir and the categories it consumes, then consumers set
   `--agents=claude,cursor`.
-- **New ticket system** (e.g. Linear): add `template/ai-specs/tickets/<system>/ticket-template.md`
-  and consumers set `--tickets=<system>`.
-
-## Requirements
-
-Node >= 18. Consumers also need the `openspec` CLI installed for the OpenSpec commands to run.
+- **New ticket system** (e.g. Linear): add a `template/ai-specs/tickets/<system>/` folder with
+  `ticket-template.md` and `ticket-system.md` (how `/implement` reads a ticket), and consumers set
+  `--tickets=<system>`.

@@ -105,10 +105,11 @@ function managedSources(ticketSystem) {
       items.push({ srcAbs: path.join(catRoot, rel), rel: path.join(cat, rel) });
     }
   }
-  // Ticket template resolves to a system-neutral path the commands reference.
-  const ticketSrc = path.join(TICKETS_SRC, ticketSystem, 'ticket-template.md');
-  if (pathExists(ticketSrc)) {
-    items.push({ srcAbs: ticketSrc, rel: 'ticket-template.md' });
+  // The chosen ticket system's files resolve to system-neutral paths the commands reference
+  // (e.g. jira/ticket-template.md -> ai-specs/ticket-template.md, jira/ticket-system.md -> ai-specs/ticket-system.md).
+  const systemRoot = path.join(TICKETS_SRC, ticketSystem);
+  for (const rel of listFiles(systemRoot)) {
+    items.push({ srcAbs: path.join(systemRoot, rel), rel });
   }
   return items;
 }
