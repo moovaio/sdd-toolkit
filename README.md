@@ -20,8 +20,8 @@ pull updates centrally when the toolkit changes.
 |----------|--------|
 | **Agents** | `spec-reviewer` — independent, adversarial reviewer of an OpenSpec change |
 | **Skills** | `openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-explore` |
-| **Commands** | `/implement` (Jira → branch → OpenSpec → review → code), `/opsx:*` |
-| **Tickets** | Ticket template per system (default: `jira`) |
+| **Commands** | `/implement` (ticket → branch → OpenSpec → review → code), `/opsx:*` |
+| **Tickets** | Per-system profile + template. Natively supported: `jira`, `trello` (default: `jira`). Any other value installs a generic fallback you wire up by hand. |
 | **Scaffold** | `openspec/config.yaml` starter (copied once, you fill it in) |
 
 ## Install into a repo (once)
@@ -35,8 +35,13 @@ npx github:moovaio/sdd-toolkit init
 Defaults to `--agents=claude --tickets=jira`. Override either:
 
 ```bash
-npx github:moovaio/sdd-toolkit init --agents=claude --tickets=jira
+npx github:moovaio/sdd-toolkit init --agents=claude --tickets=trello
 ```
+
+`--tickets` accepts a natively-supported system (`jira`, `trello`) or **any other name**. If it's
+not supported (e.g. `--tickets=osticket`), the installer still proceeds: it prints a warning with
+the manual steps and installs a generic fallback profile at `ai-specs/ticket-system.md` for you to
+fill in. Those fallback files are yours — `update` never overwrites them.
 
 Then commit `ai-specs/`, `.claude/` and `.sdd-toolkit.json`. The whole team gets the
 setup by cloning — nobody else needs to run the command.
@@ -80,4 +85,6 @@ your-repo/
   `--agents=claude,cursor`.
 - **New ticket system** (e.g. Linear): add a `template/ai-specs/tickets/<system>/` folder with
   `ticket-template.md` and `ticket-system.md` (how `/implement` reads a ticket), and consumers set
-  `--tickets=<system>`.
+  `--tickets=<system>`. Dirs starting with `_` are internal (the `_unsupported` fallback), not
+  selectable systems. Consumers who need a one-off system don't have to wait for this — they can pass
+  any `--tickets=<name>` and edit the generic fallback profile in their repo.

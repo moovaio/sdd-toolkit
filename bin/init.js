@@ -93,34 +93,63 @@ function sameContent(a, b) {
 }
 
 // ---------------------------------------------------------------------------
+// Ticket systems
+
+// Ticket-system dirs that begin with "_" are internal (e.g. the "_unsupported" fallback),
+// not user-selectable systems.
+function availableTicketSystems() {
+  if (!pathExists(TICKETS_SRC)) return [];
+  return fs.readdirSync(TICKETS_SRC, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && !e.name.startsWith('_'))
+    .map((e) => e.name)
+    .sort();
+}
+
+// Resolve a requested ticket-system name to a source dir. Natively supported systems have their own
+// dir under template/ai-specs/tickets/. Anything else falls back to the generic "_unsupported"
+// profile: it still installs and works (paste-in), but its files are copy-once (see applyManaged)
+// so the consumer can edit them to wire up their system without `update` clobbering the work.
+function resolveTicket(name) {
+  const dir = path.join(TICKETS_SRC, name);
+  if (name && !name.startsWith('_') && pathExists(dir)) {
+    return { ticketSystem: name, supported: true, srcDir: dir };
+  }
+  return { ticketSystem: name, supported: false, srcDir: path.join(TICKETS_SRC, '_unsupported') };
+}
+
+// ---------------------------------------------------------------------------
 // Managed assets
 
-// Build the list of managed source files: {srcAbs, rel} where rel is relative to ai-specs/,
-// plus the resolved ticket template for the chosen system.
-function managedSources(ticketSystem) {
+// Build the list of source files to install into ai-specs/: {srcAbs, rel, overwrite}.
+// - Category files (agents/skills/commands) are always overwritten by `update` (toolkit-owned).
+// - Ticket files resolve to system-neutral paths (e.g. jira/ticket-system.md -> ai-specs/ticket-system.md).
+//   For a supported system they are overwritten like any managed asset; for the unsupported fallback
+//   they are copy-once (overwrite:false) because the consumer edits them by hand.
+function managedSources(ticket) {
   const items = [];
   for (const cat of MANAGED_CATEGORIES) {
     const catRoot = path.join(AI_SPECS_SRC, cat);
     for (const rel of listFiles(catRoot)) {
-      items.push({ srcAbs: path.join(catRoot, rel), rel: path.join(cat, rel) });
+      items.push({ srcAbs: path.join(catRoot, rel), rel: path.join(cat, rel), overwrite: true });
     }
   }
-  // The chosen ticket system's files resolve to system-neutral paths the commands reference
-  // (e.g. jira/ticket-template.md -> ai-specs/ticket-template.md, jira/ticket-system.md -> ai-specs/ticket-system.md).
-  const systemRoot = path.join(TICKETS_SRC, ticketSystem);
-  for (const rel of listFiles(systemRoot)) {
-    items.push({ srcAbs: path.join(systemRoot, rel), rel });
+  for (const rel of listFiles(ticket.srcDir)) {
+    items.push({ srcAbs: path.join(ticket.srcDir, rel), rel, overwrite: ticket.supported });
   }
   return items;
 }
 
-// Copy managed files into target/ai-specs/, overwriting. Returns {added, updated, unchanged}.
-function applyManaged(target, ticketSystem, { dryRun }) {
-  const stats = { added: [], updated: [], unchanged: [] };
-  for (const { srcAbs, rel } of managedSources(ticketSystem)) {
+// Copy managed files into target/ai-specs/. Returns {added, updated, unchanged, skipped}.
+// `skipped` holds copy-once files (unsupported ticket profile) that already exist and were left as-is.
+function applyManaged(target, ticket, { dryRun }) {
+  const stats = { added: [], updated: [], unchanged: [], skipped: [] };
+  for (const { srcAbs, rel, overwrite } of managedSources(ticket)) {
     const destAbs = path.join(target, 'ai-specs', rel);
     if (!pathExists(destAbs)) {
       stats.added.push(rel);
+    } else if (!overwrite) {
+      stats.skipped.push(rel);
+      continue;
     } else if (!sameContent(srcAbs, destAbs)) {
       stats.updated.push(rel);
     } else {
@@ -207,6 +236,20 @@ function banner(target) {
   console.log(`  Target: ${target}\n`);
 }
 
+// Warn (but do not fail) when the chosen ticket system isn't natively supported: a generic fallback
+// profile is installed and the consumer must wire it up by hand.
+function printUnsupportedTicketWarning(name) {
+  const supported = availableTicketSystems();
+  console.log(`  ⚠  Ticket system "${name}" is not natively supported — installed a generic fallback so you can proceed.`);
+  console.log('     To wire it up:');
+  console.log('       1. Edit ai-specs/ticket-system.md  — define the key format and how /implement fetches a ticket');
+  console.log('          (MCP tool, REST API, or the paste-in fallback).');
+  console.log("       2. Adjust ai-specs/ticket-template.md if your system's fields differ.");
+  console.log('     These two files are yours now — `update` will NOT overwrite them.');
+  console.log(`     Natively supported: ${supported.join(', ')}. To make "${name}" first-class, add`);
+  console.log(`     template/ai-specs/tickets/${name}/ to sdd-toolkit and re-run with --tickets=${name}.\n`);
+}
+
 function cmdInit(flags, positional) {
   const target = resolveTarget(positional);
   banner(target);
@@ -214,20 +257,18 @@ function cmdInit(flags, positional) {
   const existing = readConfig(target) || {};
   const agents = (flags.agents ? String(flags.agents).split(',') : existing.agents) || ['claude'];
   const ticketSystem = flags.tickets || existing.ticketSystem || 'jira';
+  const ticket = resolveTicket(ticketSystem);
 
-  if (!pathExists(path.join(TICKETS_SRC, ticketSystem))) {
-    console.error(`  ! Unknown ticket system "${ticketSystem}". Available: ${fs.readdirSync(TICKETS_SRC).join(', ')}\n`);
-    process.exit(1);
-  }
+  if (!ticket.supported) printUnsupportedTicketWarning(ticketSystem);
 
-  const managed = applyManaged(target, ticketSystem, { dryRun: false });
+  const managed = applyManaged(target, ticket, { dryRun: false });
   const scaffold = applyScaffold(target, { dryRun: false });
   const links = ensureSymlinks(target, agents, { dryRun: false });
 
-  writeConfig(target, { version: PKG.version, agents, ticketSystem });
+  writeConfig(target, { version: PKG.version, agents, ticketSystem, ticketSupported: ticket.supported });
 
   console.log(`  Agents        ${agents.join(', ')}`);
-  console.log(`  Tickets       ${ticketSystem}`);
+  console.log(`  Tickets       ${ticketSystem}${ticket.supported ? '' : ' (unsupported — manual setup)'}`);
   console.log(`  Managed       ${managed.added.length} added, ${managed.updated.length} updated`);
   console.log(`  Scaffold      ${scaffold.copied.length} copied, ${scaffold.skipped.length} skipped`);
   console.log(`  Symlinks      ${links.linked.length} created, ${links.existing.length} existing`);
@@ -253,13 +294,14 @@ function cmdUpdate(flags, positional) {
   }
   const agents = config.agents || ['claude'];
   const ticketSystem = config.ticketSystem || 'jira';
+  const ticket = resolveTicket(ticketSystem);
 
-  const managed = applyManaged(target, ticketSystem, { dryRun });
+  const managed = applyManaged(target, ticket, { dryRun });
   const links = ensureSymlinks(target, agents, { dryRun });
 
   console.log(`  ${dryRun ? '[dry-run] ' : ''}Version       ${config.version} -> ${PKG.version}`);
   console.log(`  Agents        ${agents.join(', ')}`);
-  console.log(`  Tickets       ${ticketSystem}\n`);
+  console.log(`  Tickets       ${ticketSystem}${ticket.supported ? '' : ' (unsupported — ticket-system.md left untouched)'}\n`);
 
   const show = (label, list) => {
     if (!list.length) return;
@@ -275,7 +317,7 @@ function cmdUpdate(flags, positional) {
     console.log('\n  Dry run — no files written.\n');
     return;
   }
-  writeConfig(target, { ...config, version: PKG.version, agents, ticketSystem });
+  writeConfig(target, { ...config, version: PKG.version, agents, ticketSystem, ticketSupported: ticket.supported });
   if (links.errors.length) {
     console.log(`\n  Errors (${links.errors.length}):`);
     for (const e of links.errors) console.log(`    ! ${e}`);
@@ -291,6 +333,9 @@ function cmdHelp() {
     sdd init   [target] [--agents=claude] [--tickets=jira]   Scaffold SDD assets into a repo (run once).
     sdd update [target] [--dry-run]                          Refresh managed assets to this toolkit version.
     sdd help                                                  Show this help.
+
+  Ticket systems (--tickets): ${availableTicketSystems().join(', ')}.
+    Any other value still installs, with a generic fallback profile you wire up by hand.
 
   Managed assets (agents / skills / commands) live in ai-specs/ and are refreshed by \`update\`.
   Scaffold files (openspec/config.yaml) are copied once and never overwritten.

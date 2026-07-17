@@ -40,7 +40,11 @@ Two moving parts: the installer (`bin/init.js`) and the asset payload (`template
 
 ### Ticket systems
 
-`template/ai-specs/tickets/<system>/` holds per-ticket-system files (currently only `jira`). At install time the chosen system's files (`ticket-template.md`, `ticket-system.md`) are resolved to **system-neutral paths** the commands reference — they land as `ai-specs/ticket-template.md` and `ai-specs/ticket-system.md`. The commands never hardcode a ticket system; they read `ai-specs/ticket-system.md` for how to extract a key and fetch a ticket. The `tickets/` dir itself is excluded from symlinking (see the skip in `ensureSymlinks`).
+`template/ai-specs/tickets/<system>/` holds per-ticket-system files (currently `jira` and `trello`). At install time the chosen system's files (`ticket-template.md`, `ticket-system.md`) are resolved to **system-neutral paths** the commands reference — they land as `ai-specs/ticket-template.md` and `ai-specs/ticket-system.md`. The commands never hardcode a ticket system; they read `ai-specs/ticket-system.md` for how to extract a key and fetch a ticket. The `tickets/` dir itself is excluded from symlinking (see the skip in `ensureSymlinks`).
+
+`resolveTicket(name)` (in `init.js`) maps a requested `--tickets` value to a source dir. Dirs whose name starts with `_` are **internal**, not selectable (see `availableTicketSystems`). Two cases:
+- **Supported** — a matching `tickets/<name>/` exists: its files are managed (overwritten on `update`, like any other managed asset).
+- **Unsupported** — no match (e.g. `osticket`): the installer does **not** fail. It prints a warning with manual steps and falls back to `tickets/_unsupported/` (a generic paste-in profile the consumer wires up by hand). Crucially, unsupported ticket files are **copy-once** — `applyManaged` sets `overwrite: ticket.supported`, so `update` never clobbers the consumer's hand-edits. `.sdd-toolkit.json` records `ticketSupported` alongside `ticketSystem`.
 
 ### Config
 
@@ -56,6 +60,6 @@ The shipped assets are deliberately **repo- and ticket-system agnostic**: they d
 
 - **To change a shipped asset, edit the file under `template/`** — never model it as something generated. What's in `template/` is exactly what consumers receive.
 - **Adding an agent tool** (e.g. Cursor): add an entry to `AGENT_TOOLS` in `bin/init.js` mapping its dir and consumed categories. No consumer code change beyond `--agents=claude,cursor`.
-- **Adding a ticket system** (e.g. Linear): create `template/ai-specs/tickets/<system>/` with `ticket-template.md` and `ticket-system.md`. Consumers opt in via `--tickets=<system>`.
+- **Adding a ticket system** (e.g. Linear): create `template/ai-specs/tickets/<system>/` with `ticket-template.md` and `ticket-system.md`. Consumers opt in via `--tickets=<system>`. Don't prefix the dir with `_` (reserved for internal fallbacks like `_unsupported`). Consumers can already use an *unsupported* system without a toolkit change — they pass any `--tickets=<name>` and edit the installed fallback — so add a first-class dir only when it's worth sharing centrally.
 - Bump `version` in `package.json` when changing managed assets — that version is what `update` records and reports.
 - `README.md` is the user-facing install/update guide; keep it in sync when the install model changes.
