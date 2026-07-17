@@ -49,6 +49,9 @@ Creating a ticket is an **outward-facing action** — only do it after the user 
   (mark it `N/A` rather than deleting, matching the template's guidance).
 - Apply the repo's authoring conventions (language, title format/prefix). The **title** should be
   concise (~3–8 words) and follow this repo's convention; if none is documented, ask.
+- If the repo's description language differs from the template's section headers, **translate the
+  headers into the description's language**, keeping the mapping 1:1 (same sections, same order) — a
+  Spanish description with English headers reads wrong.
 - Keep it **basic-but-complete**: enough that a reader understands the what/why and the acceptance
   criteria are verifiable. It does not need to be exhaustive — it's a starting point to hand-edit.
 - Present the drafted title + description to the user. **Do NOT create the ticket yet.** Iterate on the
