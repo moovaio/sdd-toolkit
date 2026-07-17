@@ -40,7 +40,7 @@ Two moving parts: the installer (`bin/init.js`) and the asset payload (`template
 
 ### Ticket systems
 
-`template/ai-specs/tickets/<system>/` holds per-ticket-system files (currently `jira` and `trello`). At install time the chosen system's files (`ticket-template.md`, `ticket-system.md`) are resolved to **system-neutral paths** the commands reference — they land as `ai-specs/ticket-template.md` and `ai-specs/ticket-system.md`. The commands never hardcode a ticket system; they read `ai-specs/ticket-system.md` for how to extract a key and fetch a ticket. The `tickets/` dir itself is excluded from symlinking (see the skip in `ensureSymlinks`).
+`template/ai-specs/tickets/<system>/` holds per-ticket-system files (currently `jira` and `trello`). At install time the chosen system's files (`ticket-template.md`, `ticket-system.md`) are resolved to **system-neutral paths** the commands reference — they land as `ai-specs/ticket-template.md` and `ai-specs/ticket-system.md`. The commands never hardcode a ticket system; they read `ai-specs/ticket-system.md` for how to extract a key and fetch a ticket (`/implement`) and how to create one (`/ticket`) — that profile has a "Reading a ticket" and a "Creating a ticket" section per system. The `tickets/` dir itself is excluded from symlinking (see the skip in `ensureSymlinks`).
 
 `resolveTicket(name)` (in `init.js`) maps a requested `--tickets` value to a source dir. Dirs whose name starts with `_` are **internal**, not selectable (see `availableTicketSystems`). Two cases:
 - **Supported** — a matching `tickets/<name>/` exists: its files are managed (overwritten on `update`, like any other managed asset).
@@ -52,7 +52,7 @@ Two moving parts: the installer (`bin/init.js`) and the asset payload (`template
 
 ### The shipped workflow (context for editing the assets)
 
-The assets encode a chain the consumer repo uses: `/implement <ticket>` reads a ticket → creates a branch → runs `/opsx:propose` (generates `proposal.md` / `design.md` / `tasks.md` via the `openspec` CLI) → runs the **`spec-reviewer`** subagent in a fresh context for an independent adversarial review → **stops for human approval** → `/opsx:apply` implements. The commands (`commands/`) and skills (`skills/openspec-*`) are near-parallel; `/implement` orchestrates the opsx flow rather than reimplementing it.
+The assets encode a chain the consumer repo uses. `/ticket <idea>` is the front door: it researches the codebase, drafts a ticket in `ai-specs/ticket-template.md`'s format, stops for approval, and creates it via the "Creating a ticket" section of `ai-specs/ticket-system.md` — its output feeds `/implement`. Then `/implement <ticket>` reads a ticket → creates a branch → runs `/opsx:propose` (generates `proposal.md` / `design.md` / `tasks.md` via the `openspec` CLI) → runs the **`spec-reviewer`** subagent in a fresh context for an independent adversarial review → **stops for human approval** → `/opsx:apply` implements. The commands (`commands/`) and skills (`skills/openspec-*`) are near-parallel; `/implement` orchestrates the opsx flow rather than reimplementing it.
 
 The shipped assets are deliberately **repo- and ticket-system agnostic**: they defer to the *consumer* repo's `CLAUDE.md`/`AGENTS.md` for branch naming, conventions, and lint, and to `ai-specs/ticket-system.md` for ticket access. When editing them, preserve that agnosticism — don't bake in assumptions from any one consumer repo.
 

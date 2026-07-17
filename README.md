@@ -20,7 +20,7 @@ pull updates centrally when the toolkit changes.
 |----------|--------|
 | **Agents** | `spec-reviewer` — independent, adversarial reviewer of an OpenSpec change |
 | **Skills** | `openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-explore` |
-| **Commands** | `/implement` (ticket → branch → OpenSpec → review → code), `/opsx:*` |
+| **Commands** | `/ticket` (idea → grounded draft → create ticket), `/implement` (ticket → branch → OpenSpec → review → code), `/opsx:*` |
 | **Tickets** | Per-system profile + template. Natively supported: `jira`, `trello` (default: `jira`). Any other value installs a generic fallback you wire up by hand. |
 | **Scaffold** | `openspec/config.yaml` starter (copied once, you fill it in) |
 

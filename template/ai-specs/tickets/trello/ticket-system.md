@@ -32,7 +32,31 @@ It needs a personal API key and token, supplied as environment variables `TRELLO
 - Map the response for the summary: `name` → title, `desc` → description (Markdown), `list.name` → status,
   `labels[].name` → type/labels, `idShort` → the human card number, `url` → link.
 
+## Creating a ticket (Trello REST API)
+
+Used by `/ticket` to create a new card after the user approves the draft. Same
+`TRELLO_API_KEY` / `TRELLO_TOKEN` credentials as reading.
+
+- Creating a card needs the target **list id** (`idList`) — the list the card lands in (e.g. "Backlog"
+  / "To Do"). The board/list is a repo convention: take it from the consumer's `CLAUDE.md` / `AGENTS.md`,
+  or ask the user (AskUserQuestion). Resolve a board's lists with:
+  ```bash
+  curl -s "https://api.trello.com/1/boards/<boardId>/lists?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN&fields=name"
+  ```
+- Create the card (title from the repo's convention, description in Markdown):
+  ```bash
+  curl -s -X POST "https://api.trello.com/1/cards" \
+    --url-query "key=$TRELLO_API_KEY" --url-query "token=$TRELLO_TOKEN" \
+    --url-query "idList=<idList>" \
+    --data-urlencode "name=<title>" \
+    --data-urlencode "desc=<markdown description>"
+  ```
+- Optionally attach labels with `--url-query "idLabels=<id1>,<id2>"`.
+- Report the created card's `shortUrl` (or `url`) from the response.
+
 ## Fallback
 
 - If the Trello API is unreachable or the credentials are missing, ask the user to paste the card
   content instead of guessing.
+- When creating (`/ticket`), if the API is unavailable, present the finished card as Markdown for the
+  user to paste into Trello by hand.

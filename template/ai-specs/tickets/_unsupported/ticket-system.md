@@ -33,6 +33,18 @@ Pick ONE of these, document it here concretely, and delete the others so `/imple
 
 <!-- TODO: replace with your system's fetch instructions. Until you do, only the fallback below works. -->
 
+## Creating a ticket
+
+Used by `/ticket` to create a new ticket after the user approves the draft.
+
+- If you documented a programmatic create above (MCP tool or REST call), describe it here concretely —
+  the request, auth, and how the drafted title/description map to your system's fields — and `/ticket`
+  will follow it.
+- If there's no automated create, leave this as-is: `/ticket` will present the finished ticket as clean
+  Markdown (following `ticket-template.md`) for you to paste into your system by hand.
+
+<!-- TODO (optional): document how to create a ticket programmatically in your system. -->
+
 ## Fallback
 
 - If the ticket system is unreachable or these instructions are still unfilled, ask the user to paste
