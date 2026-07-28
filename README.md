@@ -18,9 +18,9 @@ pull updates centrally when the toolkit changes.
 
 | Category | Assets |
 |----------|--------|
-| **Agents** | `spec-reviewer` — independent reviewer of an OpenSpec change (the plan); `code-reviewer` — independent reviewer of the implementation diff (the code) |
+| **Agents** | `spec-reviewer` — independent reviewer of an OpenSpec change (the plan), run automatically; `code-reviewer` — independent reviewer of the implementation diff (the code), suggested and run on request |
 | **Skills** | `openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-explore` |
-| **Commands** | `/ticket` (idea → grounded draft → create ticket), `/implement` (ticket → branch → OpenSpec → spec review → code → code review), `/opsx:*` |
+| **Commands** | `/ticket` (idea → grounded draft → create ticket), `/implement` (ticket → branch → OpenSpec → spec review → code → suggested code review), `/opsx:*` |
 | **Tickets** | Per-system profile + template. Natively supported: `jira`, `trello` (default: `jira`). Any other value installs a generic fallback you wire up by hand. |
 | **Scaffold** | `openspec/config.yaml` starter (copied once, you fill it in) |
 
@@ -28,8 +28,9 @@ pull updates centrally when the toolkit changes.
 
 The assets encode one chain, from a plain-language idea to an open PR. Two **independent,
 fresh-context reviews** frame the implementation — `spec-reviewer` validates the *plan* before
-any code is written, `code-reviewer` validates the *code* before it becomes a PR — and the flow
-**stops for a human** (🛑) at every irreversible or outward-facing step.
+any code is written (automatic), and `code-reviewer` validates the *code* before it becomes a PR
+(**suggested**, run only if you ask) — and the flow **stops for a human** (🛑) at every
+irreversible or outward-facing step.
 
 ```mermaid
 flowchart TD
@@ -57,10 +58,11 @@ flowchart TD
         I7 --> I8{{"🛑 Human approves the artifacts<br/>(with the review in hand)"}}
         I8 -->|requests changes| I6
         I8 -->|approves| I9["/opsx:apply<br/>implement tasks, [ ]→[x]"]
-        I9 --> I10["code-reviewer<br/>independent review of the CODE/diff<br/>(fresh context) + optional /security-review"]
-        I10 --> I11{{"🛑 Human approves the code<br/>(with the review in hand)"}}
-        I11 -->|requests changes| I9
-        I11 -->|approves| I12["Wrap up · lint · final task progress"]
+        I9 --> I10{{"🛑 Human approves the code<br/>(code-reviewer suggested, not run)"}}
+        I10 -.->|"you ask for it"| I10b["code-reviewer<br/>independent review of the CODE/diff<br/>(fresh context) + optional /security-review"]
+        I10b -.-> I10
+        I10 -->|requests changes| I9
+        I10 -->|approves| I12["Wrap up · lint · final task progress"]
     end
 
     I12 --> P1{{"🛑 Commit / push only when you ask"}}
@@ -73,13 +75,14 @@ flowchart TD
     style T5 fill:#fff4e5,stroke:#f5a623
     style I4 fill:#fff4e5,stroke:#f5a623
     style I8 fill:#fff4e5,stroke:#f5a623
-    style I11 fill:#fff4e5,stroke:#f5a623
+    style I10 fill:#fff4e5,stroke:#f5a623
     style P1 fill:#fff4e5,stroke:#f5a623
 ```
 
 The reviews feed back: an `APPROVE-WITH-CHANGES` / `REJECT` verdict loops back to fix the
 artifacts (spec) or the code before asking for approval. Creating the ticket and opening the PR
-are outward-facing — the flow never does them without your say-so.
+are outward-facing — the flow never does them without your say-so. The code review is offered at
+the last gate rather than run for you: ask for it when the diff warrants a second pair of eyes.
 
 ## Install into a repo (once)
 

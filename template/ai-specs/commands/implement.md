@@ -8,9 +8,9 @@ tags: [workflow, ticket, openspec]
 End-to-end implementation of a ticket. This command orchestrates the existing OpenSpec flow
 (`/opsx:propose` → review → `/opsx:apply`) but starts from a ticket: it reads the ticket,
 creates the branch following this repo's convention, generates the change artifacts, runs an
-**independent `spec-reviewer` pass**, **stops for your review**, writes code, then runs an
-**independent `code-reviewer` pass** on the diff and **stops again** before anything becomes a PR.
-Two independent reviews frame the work: one validates the plan, one validates the code.
+**independent `spec-reviewer` pass**, **stops for your review**, writes code, then **stops again**
+before anything becomes a PR — **suggesting** (not running) an independent `code-reviewer` pass
+on the diff. The plan review is automatic; the code review is yours to ask for.
 
 **Input**: The argument after `/implement` is the ticket key (e.g. `/implement MOOV-5147`).
 
@@ -96,25 +96,24 @@ Do NOT skip the confirmations.
 - Respect this repo's project constraints from `CLAUDE.md` / `AGENTS.md` (lint/format commands, protected
   strings, routing/DB conventions, etc. — run the repo's lint before considering a task done where relevant).
 
-## Step 7 — Independent code review, then STOP for approval (before any PR)
+## Step 7 — STOP for approval, and SUGGEST an independent code review (before any PR)
 
-- **Run the `code-reviewer` subagent** (Agent tool, `subagent_type: "code-reviewer"`),
-  passing the change path `openspec/changes/<change-name>/` and the ticket key. It reviews the
+- Present a concise summary of the finished implementation: what changed, which tasks are done,
+  and anything worth a closer look.
+- **Suggest — do not run — an independent code review.** Offer the `code-reviewer` subagent
+  (Agent tool, `subagent_type: "code-reviewer"`) as the recommended next step: it reviews the
   **implementation diff** against the approved artifacts and the real codebase in a fresh,
-  independent context — its distinctive job is conformance: did the code do what you approved
-  in Step 5? It returns a prioritized findings report with a verdict. This mirrors the
-  spec-review from Step 5 on the other half of the work: Step 5 validates the plan, this
-  validates the code, and running it here — before the change becomes a PR — is the point.
+  independent context, and its distinctive job is conformance — did the code do what was approved
+  in Step 5? Name it explicitly so the user can ask for it in one word. **Only run it if the user
+  asks.** Do not spend a review pass they didn't request.
 - If the change touches security-sensitive surface (auth, public endpoints, data handling,
-  query building, secrets), **suggest the user also run `/security-review`** on the diff — a
-  dedicated pass tuned for vulnerabilities. It's complementary to the `code-reviewer`, not a
-  substitute; offer it, don't force it.
-- Present a concise summary of the finished implementation **together with the code-reviewer's
-  report** (and any `/security-review` findings), so the user reviews the code with that in hand.
-- If the review surfaces `APPROVE-WITH-CHANGES` or `REJECT`, fix the findings (following the
-  same skills/conventions as Step 6) before asking for approval, or explain why a finding is
-  being deferred. Re-run the reviewer after non-trivial fixes. Iterate until the user approves.
-- **Explicitly wait for the user's approval.** Do not commit, push, or open a PR until the user agrees.
+  query building, secrets), **also suggest `/security-review`** on the diff — a dedicated pass
+  tuned for vulnerabilities, complementary to the `code-reviewer`. Same rule: offer it, don't run it.
+- If the user does request a review and it surfaces `APPROVE-WITH-CHANGES` or `REJECT`, fix the
+  findings (following the same skills/conventions as Step 6) before asking for approval, or
+  explain why a finding is being deferred. Re-run the reviewer after non-trivial fixes.
+- **Explicitly wait for the user's approval.** Do not commit, push, or open a PR until the user
+  agrees — with or without a code review having been run. Skipping the review is the user's call.
 
 ## Step 8 — Wrap up
 
@@ -126,6 +125,7 @@ Do NOT skip the confirmations.
 **Guardrails**
 - Confirm before every irreversible step (branch creation, first code change).
 - Never write application code before the user approves the artifacts (Step 5).
-- Never commit, push, or open a PR before the user approves the code review (Step 7).
+- Never commit, push, or open a PR before the user approves the implementation (Step 7).
+- Never launch the `code-reviewer` (or `/security-review`) on your own — suggest it and wait to be asked.
 - If the ticket system is unreachable, ask the user to paste the ticket content instead of guessing.
 - Reuse the existing `opsx` / `openspec-*` flows — do not reimplement their logic here.
