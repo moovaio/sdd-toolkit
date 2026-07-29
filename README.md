@@ -158,7 +158,9 @@ npx github:moovaio/sdd-toolkit update --dry-run  # preview what would change
 - **Tool dirs** (`.claude/`) are **symlinks** into `ai-specs/`, so updating the real file
   updates what every agent tool reads. No duplication.
 - **Scaffold files** (`openspec/config.yaml`) are copied once and never overwritten.
-- **Config** lives in `.sdd-toolkit.json`: `{ version, agents, ticketSystem }`.
+- **Config** lives in `.sdd-toolkit.json`: `{ version, agents, ticketSystem, ticketSupported }`.
+  `ticketSupported` records whether the chosen ticket system shipped with the toolkit; it is what
+  makes `update` overwrite a supported system's profile but leave a hand-filled fallback alone.
 
 ```
 your-repo/
