@@ -25,6 +25,13 @@ Do not take the artifacts at face value. Verify claims against the actual code w
 instructions (`CLAUDE.md` / `AGENTS.md`) and from reading neighboring code; check the
 design against that reality, not against assumptions carried over from other repos.
 
+**The change is the unit of review.** Read the repo's agent instructions and the modules the
+design actually touches. Beyond that, every read should be in service of a specific claim you
+are trying to confirm or refute ("does this service already handle X?", "what does the existing
+caller expect here?") — not building a general model of the codebase. Scale your exploration to
+the change: a three-task change does not need a tour of the architecture. If you find yourself
+reading files you can't tie to a finding, stop and write the report.
+
 Report **only actionable problems**, ordered by severity. For each finding give: a one-line
 summary, the file/artifact (and line if useful), why it's a problem, and a concrete fix.
 

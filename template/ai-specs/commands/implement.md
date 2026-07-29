@@ -10,7 +10,8 @@ End-to-end implementation of a ticket. This command orchestrates the existing Op
 creates the branch following this repo's convention, generates the change artifacts, runs an
 **independent `spec-reviewer` pass**, **stops for your review**, writes code, then **stops again**
 before anything becomes a PR — **suggesting** (not running) an independent `code-reviewer` pass
-on the diff. The plan review is automatic; the code review is yours to ask for.
+on the diff. The plan review runs by default and is skipped only for small mechanical changes;
+the code review is always yours to ask for.
 
 **Input**: The argument after `/implement` is the ticket key (e.g. `/implement MOOV-5147`).
 
@@ -62,6 +63,10 @@ Do NOT skip the confirmations.
 
 ## Step 4 — Generate OpenSpec artifacts (propose)
 
+- **First check whether this ticket already has a change** under `openspec/changes/` (its name
+  includes the ticket key). If it does and its artifacts are complete, this is a resumed cycle:
+  confirm with the user that they already approved these artifacts, then **skip to Step 6**. Do
+  not regenerate artifacts or re-run the review that was already paid for.
 - Follow the **`openspec-propose` skill** / `/opsx:propose` flow, but use the **ticket content as the input
   description** instead of asking the user what to build.
 - Use a change name consistent with the branch (a lower-case slug that includes the ticket key).
@@ -73,19 +78,36 @@ Do NOT skip the confirmations.
 
 ## Step 5 — Independent spec review, then STOP for approval (do NOT write code yet)
 
-- **First, run the `spec-reviewer` subagent** (Agent tool, `subagent_type: "spec-reviewer"`),
-  passing the change path `openspec/changes/<change-name>/` and the ticket key.
-  It reviews the artifacts against the real codebase in a fresh, independent context and
-  returns a prioritized findings report with a verdict. Running it here — before human
-  approval — is the point: it catches scope gaps, convention mismatches, and invariant
-  risks that the authoring context is biased to miss.
+- **Decide whether to run the `spec-reviewer` subagent** (Agent tool, `subagent_type: "spec-reviewer"`),
+  passing the change path `openspec/changes/<change-name>/` and the ticket key. It reviews the
+  artifacts against the real codebase in a fresh, independent context and returns a prioritized
+  findings report with a verdict. Running it *before* human approval is the point: it catches
+  scope gaps, convention mismatches, and invariant risks the authoring context is biased to miss.
+  - **Default to running it.** An independent review pass costs real time and tokens, so it is
+    not unconditional — but the bar for skipping is high, and when in doubt, run it.
+  - **Run it** whenever the change is non-trivial (several tasks, more than a couple of files)
+    **or** touches load-bearing surface: authentication, authorization, application bootstrap or
+    service providers, public endpoints, migrations, money, queues, or anything this repo's
+    `CLAUDE.md` / `AGENTS.md` marks as an invariant.
+  - **Offer to skip it** only when the change is *both* small *and* mechanical — a handful of
+    tasks, no sensitive surface, no new behavior (a rename, a config value, a copy change).
+    Say what you're skipping and why, and let the user ask for it anyway.
 - Present a concise summary of the generated artifacts (what changes, the design approach,
-  and the task list) **together with the spec-reviewer's report**, so the user approves
-  with that review in hand.
+  and the task list) **together with the spec-reviewer's report** when one was run, so the
+  user approves with that review in hand.
 - If the review surfaces `APPROVE-WITH-CHANGES` or `REJECT`, address the findings (update
   the artifacts) before asking for approval, or explain why a finding is being deferred.
 - **Explicitly wait for the user's approval.** Do not modify any application code until the user agrees.
 - If the user requests changes to the artifacts, update them and re-present. Iterate until they approve.
+- **Once they approve, suggest continuing in a fresh session** before you start Step 6:
+  > The approved artifacts in `openspec/changes/<change-name>/` are the complete handoff —
+  > `/opsx:apply` needs nothing from this conversation. Starting a new session here drops the
+  > ticket fetch, the codebase exploration and the review report out of the context that every
+  > implementation turn re-reads, which is the single largest cost in this cycle.
+
+  Tell them the exact way to resume (`/opsx:apply <change-name>`, or `/implement <KEY>` which
+  will find the existing change). **It is a suggestion, not a gate** — if they'd rather continue
+  here, continue with Step 6 immediately and don't raise it again.
 
 ## Step 6 — Implement (apply)
 
@@ -114,6 +136,10 @@ Do NOT skip the confirmations.
   explain why a finding is being deferred. Re-run the reviewer after non-trivial fixes.
 - **Explicitly wait for the user's approval.** Do not commit, push, or open a PR until the user
   agrees — with or without a code review having been run. Skipping the review is the user's call.
+- If the implementation was long (many tasks, a lot of exploration, a test/lint loop), **mention
+  that a review or the PR can run in a fresh session**: the diff on the branch and the approved
+  artifacts are all a reviewer needs, and by this point every turn is re-reading the whole
+  implementation history. Same rule as Step 5 — suggest once, don't insist, don't block.
 
 ## Step 8 — Wrap up
 
@@ -125,6 +151,8 @@ Do NOT skip the confirmations.
 **Guardrails**
 - Confirm before every irreversible step (branch creation, first code change).
 - Never write application code before the user approves the artifacts (Step 5).
+- The fresh-session suggestions (Steps 5 and 7) are suggestions. Never refuse to continue in the
+  current session, and never raise the same one twice.
 - Never commit, push, or open a PR before the user approves the implementation (Step 7).
 - Never launch the `code-reviewer` (or `/security-review`) on your own — suggest it and wait to be asked.
 - If the ticket system is unreachable, ask the user to paste the ticket content instead of guessing.

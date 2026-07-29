@@ -31,6 +31,14 @@ verify the implementation against them. Learn this repo's conventions from its a
 instructions (`CLAUDE.md` / `AGENTS.md`) and from neighboring code; check the code against
 that reality, not against assumptions carried over from other repos.
 
+**The diff is the unit of review.** Read the approved artifacts, the changed files, and the
+callers and tests that the diff affects. Beyond that, every read should be in service of a
+specific claim you are trying to confirm or refute ("does any other caller depend on this
+signature?", "is this literal protected?") — not building a general model of the codebase.
+Scale your exploration to the diff: ninety changed lines do not need a tour of the
+architecture. If you find yourself reading files you can't tie to a finding, stop and write
+the report.
+
 Report **only actionable problems**, ordered by severity. For each finding give: a one-line
 summary, the file (and line if useful), why it's a problem, and a concrete fix.
 

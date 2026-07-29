@@ -18,9 +18,9 @@ pull updates centrally when the toolkit changes.
 
 | Category | Assets |
 |----------|--------|
-| **Agents** | `spec-reviewer` — independent reviewer of an OpenSpec change (the plan), run automatically; `code-reviewer` — independent reviewer of the implementation diff (the code), suggested and run on request |
-| **Skills** | `openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-explore` |
-| **Commands** | `/ticket` (idea → grounded draft → create ticket), `/implement` (ticket → branch → OpenSpec → spec review → code → suggested code review), `/opsx:*` |
+| **Agents** | `spec-reviewer` — independent reviewer of an OpenSpec change (the plan), run by default; `code-reviewer` — independent reviewer of the implementation diff (the code), suggested and run on request |
+| **Skills** | `openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-explore`, `sdd-usage-report` (measured time/token/dollar cost of a session or cycle) |
+| **Commands** | `/ticket` (idea → grounded draft → create ticket), `/implement` (ticket → branch → OpenSpec → spec review → code → suggested code review), `/usage-report` (what a cycle cost), `/opsx:*` |
 | **Tickets** | Per-system profile + template. Natively supported: `jira`, `trello` (default: `jira`). Any other value installs a generic fallback you wire up by hand. |
 | **Scaffold** | `openspec/config.yaml` starter (copied once, you fill it in) |
 
@@ -28,9 +28,9 @@ pull updates centrally when the toolkit changes.
 
 The assets encode one chain, from a plain-language idea to an open PR. Two **independent,
 fresh-context reviews** frame the implementation — `spec-reviewer` validates the *plan* before
-any code is written (automatic), and `code-reviewer` validates the *code* before it becomes a PR
-(**suggested**, run only if you ask) — and the flow **stops for a human** (🛑) at every
-irreversible or outward-facing step.
+any code is written (**by default**, skipped only when a change is both small and mechanical),
+and `code-reviewer` validates the *code* before it becomes a PR (**suggested**, run only if you
+ask) — and the flow **stops for a human** (🛑) at every irreversible or outward-facing step.
 
 ```mermaid
 flowchart TD
@@ -54,10 +54,12 @@ flowchart TD
         I3 --> I4{{"🛑 Confirm branch name"}}
         I4 -->|approves| I5["git checkout -b &lt;branch&gt;<br/>from origin/default — includes the key"]
         I5 --> I6["/opsx:propose<br/>proposal.md · design.md · tasks.md"]
-        I6 --> I7["spec-reviewer<br/>independent review of the PLAN<br/>(fresh context)"]
+        I6 --> I7["spec-reviewer<br/>independent review of the PLAN<br/>(fresh context, runs by default)"]
+        I6 -.->|"small + mechanical change"| I8
         I7 --> I8{{"🛑 Human approves the artifacts<br/>(with the review in hand)"}}
         I8 -->|requests changes| I6
         I8 -->|approves| I9["/opsx:apply<br/>implement tasks, [ ]→[x]"]
+        I8 -.- S1["↻ fresh session suggested here<br/>the approved artifacts on disk<br/>are the whole handoff"]
         I9 --> I10{{"🛑 Human approves the code<br/>(code-reviewer suggested, not run)"}}
         I10 -.->|"you ask for it"| I10b["code-reviewer<br/>independent review of the CODE/diff<br/>(fresh context) + optional /security-review"]
         I10b -.-> I10
@@ -77,12 +79,45 @@ flowchart TD
     style I8 fill:#fff4e5,stroke:#f5a623
     style I10 fill:#fff4e5,stroke:#f5a623
     style P1 fill:#fff4e5,stroke:#f5a623
+    style S1 fill:#f7f7f7,stroke:#999,color:#555
 ```
 
 The reviews feed back: an `APPROVE-WITH-CHANGES` / `REJECT` verdict loops back to fix the
 artifacts (spec) or the code before asking for approval. Creating the ticket and opening the PR
 are outward-facing — the flow never does them without your say-so. The code review is offered at
 the last gate rather than run for you: ask for it when the diff warrants a second pair of eyes.
+
+The human gates are also the cheap places to **split the cycle across sessions**, which is why
+`/implement` suggests it there. Every turn re-reads the whole conversation before it, so a
+single session that runs from ticket to PR pays for the ticket fetch and the codebase
+exploration on every implementation turn. At the artifact gate, `openspec/changes/<name>/` is
+already the complete handoff — `/opsx:apply` needs nothing from that conversation. It stays a
+suggestion: if you'd rather keep going in one session, the flow continues without asking twice.
+
+## What a cycle costs
+
+`/usage-report` measures it from the Claude Code transcripts on disk — wall-clock time, model
+time (wall-clock minus the time it spent waiting on you), tokens and dollars, per phase, with
+each subagent itemized.
+
+```bash
+/usage-report              # the current session
+/usage-report MOOV-5147    # the whole cycle, even if it ran across several sessions
+```
+
+It selects a cycle by matching the ticket key against the git branch recorded in every
+transcript row, so splitting the cycle into sessions doesn't hide anything from the report.
+Read the `cache read` column first — it is normally the largest line, it is context re-read on
+every turn, and it grows with session length. When it dominates, the lever is shorter sessions
+rather than fewer tokens per turn.
+
+The skill runs a bundled script (`report.py`, stdlib only) rather than deriving the numbers in
+prose, because three details of the transcript format make hand-counting wrong by 2–8×: one API
+request writes one row per content block and **every row repeats the full `usage`** (group by
+`message.id`), `output_tokens` grows across those rows so only the last is final (take the max),
+and `toolUseResult.totalTokens` on a Task result is a subagent's **last turn**, not its total
+(the real figures are in `<session>/subagents/agent-*.jsonl`). The script prints the pricing
+date it used — confirm current rates before quoting dollars.
 
 ## Install into a repo (once)
 
@@ -130,7 +165,8 @@ your-repo/
   ai-specs/                    # managed source of truth (committed)
     agents/{spec-reviewer.md,code-reviewer.md}
     skills/openspec-*/
-    commands/{implement.md,opsx/*}
+    skills/sdd-usage-report/    # SKILL.md + report.py
+    commands/{ticket.md,implement.md,usage-report.md,opsx/*}
     ticket-template.md         # resolved from the chosen ticket system
   .claude/                     # symlinks -> ai-specs/
     agents/…  skills/…  commands/…

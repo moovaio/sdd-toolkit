@@ -41,6 +41,13 @@ Creating a ticket is an **outward-facing action** — only do it after the user 
   functions** — not generic. Prefer citing actual paths over hand-wavy descriptions.
 - Note the repo's ticket-authoring conventions found there (title prefix, description language,
   project/board, issue type, labels). Hold anything still unknown for Step 4.
+- **If a convention isn't documented, infer it once — then persist it.** Reading existing tickets
+  from the ticket system to work out the house style (title format, description language, default
+  project/board, issue type, labels) is expensive: it is many API calls, and it is the same answer
+  every time. After you infer it, tell the user what you found and **offer to write it into this
+  repo's `CLAUDE.md` / `AGENTS.md`** so the next `/ticket` reads one file instead of re-deriving it.
+  Keep it to a few lines under a "Ticket conventions" heading — the facts, not the reasoning.
+  Only write it if they agree, and don't re-offer for a convention that's already documented.
 
 ## Step 3 — Draft the ticket and STOP for review
 
@@ -75,5 +82,7 @@ Creating a ticket is an **outward-facing action** — only do it after the user 
   question rather than writing a generic ticket.
 - Follow this repo's conventions (title/language/project) from `CLAUDE.md` / `AGENTS.md`; ask when a
   convention is missing instead of guessing, and don't carry over another repo's conventions.
+- When you had to infer a convention from the ticket system, offer to persist it (Step 2) so the
+  next run doesn't pay for the same discovery.
 - Resolve system metadata dynamically (e.g. the active sprint) as the ticket-system profile describes
   — do not hard-code values that change.
