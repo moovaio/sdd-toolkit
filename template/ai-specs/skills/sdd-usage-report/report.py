@@ -29,6 +29,7 @@ import argparse
 import glob
 import json
 import os
+import re
 import sys
 from datetime import datetime, timezone
 
@@ -73,11 +74,19 @@ def project_dir(cwd):
     Tries the slug Claude Code derives from the path, then falls back to
     matching the `cwd` field recorded inside each project's transcripts.
     """
-    root = os.path.expanduser("~/.claude/projects")
-    slug = os.path.join(root, cwd.replace("/", "-"))
-    if os.path.isdir(slug):
+    root = os.path.realpath(os.path.expanduser("~/.claude/projects"))
+    # Claude Code slugs the path by replacing every non [A-Za-z0-9-] char
+    # (including dots: moova.io -> moova-io). Resolve and confine the result
+    # to the projects root so a crafted --project can't escape it.
+    slug = os.path.realpath(
+        os.path.join(root, re.sub(r"[^A-Za-z0-9-]", "-", cwd))
+    )
+    if os.path.commonpath([slug, root]) == root and os.path.isdir(slug):
         return slug
     for candidate in sorted(glob.glob(os.path.join(root, "*"))):
+        candidate = os.path.realpath(candidate)
+        if os.path.commonpath([candidate, root]) != root:
+            continue
         if not os.path.isdir(candidate):
             continue
         files = glob.glob(os.path.join(candidate, "*.jsonl"))
