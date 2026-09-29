@@ -1,6 +1,6 @@
 # Ticket system profile — Jira (Atlassian)
 
-`/implement` reads this profile to know how to resolve and fetch a ticket. It is installed as
+`/implement`, `/ticket` and `/tasks` read this profile to know how to reach the ticket system. It is installed as
 `ai-specs/ticket-system.md` when the toolkit is set up with `--tickets=jira`. Switch systems by
 re-running the installer with a different `--tickets=<system>`; add a system by creating
 `template/ai-specs/tickets/<system>/ticket-system.md` in the toolkit.
@@ -48,6 +48,25 @@ Used by `/ticket` to create a new issue after the user approves the draft.
   title prefix), `contentFormat: "markdown"`, `description` (the approved text), `assignee_account_id`,
   and `additional_fields: { "customfield_10020": <activeSprintId> }` (omit if backlog).
 - Report the created key + URL (e.g. `https://moova1.atlassian.net/browse/<KEY>-XXXX`).
+
+## Listing recent activity (Atlassian MCP)
+
+Used by `/tasks` to find the tickets you touched in a date window `D`..`D+1` (`yyyy-MM-dd`).
+
+- Load the tools with **ToolSearch**:
+  `select:mcp__claude_ai_Atlassian_Rovo__searchJiraIssuesUsingJql,mcp__claude_ai_Atlassian_Rovo__getAccessibleAtlassianResources`.
+  Same auth flow and `cloudId` resolution as "Reading a ticket".
+- One query covers it — created by you, moved by you, or assigned to you and changed:
+  ```
+  searchJiraIssuesUsingJql(jql:
+    "(reporter = currentUser() AND created >= \"D\" AND created < \"D+1\")
+     OR status CHANGED DURING (\"D\", \"D+1\") BY currentUser()
+     OR (assignee = currentUser() AND updated >= \"D\" AND updated < \"D+1\")
+     ORDER BY updated DESC",
+    fields: ["summary", "status", "issuetype", "created", "reporter"], maxResults: 50)
+  ```
+- A ticket whose `created` falls in the window and whose reporter is you goes under
+  the created tickets; for the rest, `status` is where it stands now.
 
 ## Fallback
 

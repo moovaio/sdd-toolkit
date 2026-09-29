@@ -45,6 +45,16 @@ Used by `/ticket` to create a new ticket after the user approves the draft.
 
 <!-- TODO (optional): document how to create a ticket programmatically in your system. -->
 
+## Listing recent activity
+
+Used by `/tasks` to find the tickets you created, moved or changed in a date window.
+
+- If your system can list a user's activity (an MCP search tool, a REST query filtered by user and
+  date), describe the request here and how the response maps to key / title / status.
+- If not, leave this as-is: `/tasks` will summarize from git history alone.
+
+<!-- TODO (optional): document how to list your recent tickets. -->
+
 ## Fallback
 
 - If the ticket system is unreachable or these instructions are still unfilled, ask the user to paste

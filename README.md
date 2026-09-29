@@ -20,7 +20,7 @@ pull updates centrally when the toolkit changes.
 |----------|--------|
 | **Agents** | `spec-reviewer` — independent reviewer of an OpenSpec change (the plan), run by default; `code-reviewer` — independent reviewer of the implementation diff (the code), suggested and run on request |
 | **Skills** | `openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-explore`, `sdd-usage-report` (measured time/token/dollar cost of a session or cycle) |
-| **Commands** | `/ticket` (idea → grounded draft → create ticket), `/implement` (ticket → branch → OpenSpec → spec review → code → suggested code review), `/usage-report` (what a cycle cost), `/opsx:*` |
+| **Commands** | `/ticket` (idea → grounded draft → create ticket), `/implement` (ticket → branch → OpenSpec → spec review → code → suggested code review), `/usage-report` (what a cycle cost), `/tasks` (what you did on a day, for the daily), `/opsx:*` |
 | **Tickets** | Per-system profile + template. Natively supported: `jira`, `trello` (default: `jira`). Any other value installs a generic fallback you wire up by hand. |
 | **Scaffold** | `openspec/config.yaml` starter (copied once, you fill it in) |
 
@@ -93,6 +93,29 @@ single session that runs from ticket to PR pays for the ticket fetch and the cod
 exploration on every implementation turn. At the artifact gate, `openspec/changes/<name>/` is
 already the complete handoff — `/opsx:apply` needs nothing from that conversation. It stays a
 suggestion: if you'd rather keep going in one session, the flow continues without asking twice.
+
+## What you did yesterday
+
+`/tasks` rebuilds a day from git history and the ticket system, as a short summary to read out at
+the daily: what you worked on, what reached dev, what reached production, and tickets you created.
+
+```bash
+/tasks              # the previous working day (on Monday, the Friday before)
+/tasks 2026-09-25   # a specific day
+```
+
+It is read-only and covers the current repo. The dev and production branches are configurable in the
+repo's `CLAUDE.md` / `AGENTS.md`:
+
+```markdown
+## Environment branches
+- dev: `dev`
+- production: `master`
+```
+
+Without that note it defaults to the first existing of `dev`/`develop`/`development`/`staging` and
+`master`/`main`/`production`, and offers to record what it found. The ticket query comes from the "Listing recent activity" section of `ai-specs/ticket-system.md` —
+without one, the summary is from git alone.
 
 ## What a cycle costs
 
@@ -168,7 +191,7 @@ your-repo/
     agents/{spec-reviewer.md,code-reviewer.md}
     skills/openspec-*/
     skills/sdd-usage-report/    # SKILL.md + report.py
-    commands/{ticket.md,implement.md,usage-report.md,opsx/*}
+    commands/{ticket.md,implement.md,usage-report.md,tasks.md,opsx/*}
     ticket-template.md         # resolved from the chosen ticket system
   .claude/                     # symlinks -> ai-specs/
     agents/…  skills/…  commands/…

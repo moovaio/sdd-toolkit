@@ -1,6 +1,6 @@
 # Ticket system profile — Trello
 
-`/implement` reads this profile to know how to resolve and fetch a ticket. It is installed as
+`/implement`, `/ticket` and `/tasks` read this profile to know how to reach the ticket system. It is installed as
 `ai-specs/ticket-system.md` when the toolkit is set up with `--tickets=trello`. Switch systems by
 re-running the installer with a different `--tickets=<system>`; add a system by creating
 `template/ai-specs/tickets/<system>/ticket-system.md` in the toolkit.
@@ -53,6 +53,22 @@ Used by `/ticket` to create a new card after the user approves the draft. Same
   ```
 - Optionally attach labels with `--url-query "idLabels=<id1>,<id2>"`.
 - Report the created card's `shortUrl` (or `url`) from the response.
+
+## Listing recent activity (Trello REST API)
+
+Used by `/tasks` to find the cards you touched in a date window `D`..`D+1`. Same credentials as
+reading.
+
+```bash
+curl -s "https://api.trello.com/1/members/me/actions?key=$TRELLO_API_KEY&token=$TRELLO_TOKEN&since=<start>&before=<end>&filter=createCard,updateCard:idList,commentCard&limit=200"
+```
+
+- `since` / `before` are read as **UTC**. Pass the local day's bounds converted to UTC ISO
+  timestamps (e.g. in UTC-3, `D` is `since=<D>T03:00:00Z&before=<D+1>T03:00:00Z`), or the window
+  shifts by your offset.
+- `type: createCard` → a card you created; `type: updateCard` with `data.listAfter` → a card you
+  moved (`data.listAfter.name` is where it went); `type: commentCard` → a card you worked on.
+- `data.card.name` and `data.card.shortLink` name the card; group actions by `shortLink`.
 
 ## Fallback
 
