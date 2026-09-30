@@ -1,6 +1,6 @@
 # Ticket system profile — Jira (Atlassian)
 
-`/implement`, `/ticket` and `/tasks` read this profile to know how to reach the ticket system. It is installed as
+`/implement`, `/ticket` and `/daily` read this profile to know how to reach the ticket system. It is installed as
 `ai-specs/ticket-system.md` when the toolkit is set up with `--tickets=jira`. Switch systems by
 re-running the installer with a different `--tickets=<system>`; add a system by creating
 `template/ai-specs/tickets/<system>/ticket-system.md` in the toolkit.
@@ -51,7 +51,7 @@ Used by `/ticket` to create a new issue after the user approves the draft.
 
 ## Listing recent activity (Atlassian MCP)
 
-Used by `/tasks` to find the tickets you touched in a date window `D`..`D+1` (`yyyy-MM-dd`).
+Used by `/daily` to find the tickets you touched in a date window `D`..`D+1` (`yyyy-MM-dd`).
 
 - Load the tools with **ToolSearch**:
   `select:mcp__claude_ai_Atlassian_Rovo__searchJiraIssuesUsingJql,mcp__claude_ai_Atlassian_Rovo__getAccessibleAtlassianResources`.

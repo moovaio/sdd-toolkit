@@ -15,7 +15,8 @@
  *     inside the target repo and are OVERWRITTEN on `update`. Tool dirs like `.claude/` are symlinks
  *     into `ai-specs/`, so updating the real file updates what every agent tool sees.
  *   - "scaffold" files (openspec/config.yaml, ...) are copied ONCE and never overwritten — each repo owns them.
- *   - `.sdd-toolkit.json` records the applied version and the chosen agents / ticket system.
+ *   - `.sdd-toolkit.json` records the applied version, the chosen agents / ticket system, and the list of
+ *     managed files installed (`managedFiles`), so `update` can remove the ones the toolkit no longer ships.
  */
 
 const fs = require('fs');
@@ -30,6 +31,10 @@ const CONFIG_FILE = '.sdd-toolkit.json';
 
 // Managed categories: top-level dirs under ai-specs/ that get copied verbatim and symlinked into tool dirs.
 const MANAGED_CATEGORIES = ['agents', 'skills', 'commands'];
+
+// Managed files older toolkit versions shipped and later removed or renamed. Only consulted for installs
+// whose config predates `managedFiles` (<= 0.6.0); newer installs are cleaned up from their recorded list.
+const LEGACY_REMOVED = ['commands/tasks.md'];
 
 // Agent tool registry: name -> where to materialize symlinks and which categories it consumes.
 // Adding a new tool is config-only for consumers; adding its mapping here enables it.
@@ -164,6 +169,35 @@ function applyManaged(target, ticket, { dryRun }) {
   return stats;
 }
 
+// Paths (relative to ai-specs/) of the toolkit-owned files this version installs. Recorded in the config
+// as `managedFiles`. Copy-once files (unsupported ticket profile) are the consumer's, so they're left out.
+function managedFileList(ticket) {
+  return managedSources(ticket).filter((s) => s.overwrite).map((s) => s.rel).sort();
+}
+
+// Remove managed files the previous install recorded but this version no longer ships (renamed or dropped
+// assets). Only files the toolkit installed are candidates — anything a consumer added to ai-specs/ is never
+// in the list. Configs without `managedFiles` fall back to LEGACY_REMOVED. Returns the removed paths.
+function removeStale(target, config, ticket, { dryRun }) {
+  const current = new Set(managedFileList(ticket));
+  const previous = config.managedFiles || LEGACY_REMOVED;
+  const removed = [];
+  for (const rel of previous) {
+    if (current.has(rel)) continue;
+    const abs = path.join(target, 'ai-specs', rel);
+    if (!pathExists(abs)) continue;
+    removed.push(rel);
+    if (dryRun) continue;
+    fs.rmSync(abs);
+    // Drop dirs left empty (e.g. a removed skill), up to the category root.
+    const stop = path.join(target, 'ai-specs');
+    for (let dir = path.dirname(abs); dir !== stop && fs.readdirSync(dir).length === 0; dir = path.dirname(dir)) {
+      fs.rmdirSync(dir);
+    }
+  }
+  return removed;
+}
+
 // ---------------------------------------------------------------------------
 // Scaffold (copy-once)
 
@@ -224,6 +258,31 @@ function ensureSymlinks(target, agents, { dryRun }) {
   return stats;
 }
 
+// Remove tool-dir symlinks into ai-specs/ whose target is gone (left behind by removeStale). Only dangling
+// links that point into ../../ai-specs/ are touched; the consumer's own files and links are left alone.
+// `gone` holds the stale paths removeStale reported: in a dry run they're still on disk, so a link to one
+// counts as dangling too.
+function pruneSymlinks(target, agents, { dryRun, gone }) {
+  const removed = [];
+  for (const agent of agents) {
+    const tool = AGENT_TOOLS[agent];
+    if (!tool) continue;
+    for (const cat of tool.categories) {
+      const catDir = path.join(target, tool.dir, cat);
+      if (!pathExists(catDir)) continue;
+      for (const name of fs.readdirSync(catDir)) {
+        const linkPath = path.join(catDir, name);
+        if (!fs.lstatSync(linkPath).isSymbolicLink()) continue;
+        if (fs.readlinkSync(linkPath) !== path.join('..', '..', 'ai-specs', cat, name)) continue;
+        if (fs.existsSync(linkPath) && !gone.has(path.join(cat, name))) continue; // target still there
+        removed.push(path.join(tool.dir, cat, name));
+        if (!dryRun) fs.unlinkSync(linkPath);
+      }
+    }
+  }
+  return removed;
+}
+
 // ---------------------------------------------------------------------------
 
 function resolveTarget(positional) {
@@ -265,7 +324,9 @@ function cmdInit(flags, positional) {
   const scaffold = applyScaffold(target, { dryRun: false });
   const links = ensureSymlinks(target, agents, { dryRun: false });
 
-  writeConfig(target, { version: PKG.version, agents, ticketSystem, ticketSupported: ticket.supported });
+  writeConfig(target, {
+    version: PKG.version, agents, ticketSystem, ticketSupported: ticket.supported, managedFiles: managedFileList(ticket),
+  });
 
   console.log(`  Agents        ${agents.join(', ')}`);
   console.log(`  Tickets       ${ticketSystem}${ticket.supported ? '' : ' (unsupported — manual setup)'}`);
@@ -297,7 +358,9 @@ function cmdUpdate(flags, positional) {
   const ticket = resolveTicket(ticketSystem);
 
   const managed = applyManaged(target, ticket, { dryRun });
+  const stale = removeStale(target, config, ticket, { dryRun });
   const links = ensureSymlinks(target, agents, { dryRun });
+  const prunedLinks = pruneSymlinks(target, agents, { dryRun, gone: new Set(stale) });
 
   console.log(`  ${dryRun ? '[dry-run] ' : ''}Version       ${config.version} -> ${PKG.version}`);
   console.log(`  Agents        ${agents.join(', ')}`);
@@ -310,14 +373,19 @@ function cmdUpdate(flags, positional) {
   };
   show('Added', managed.added);
   show('Updated', managed.updated);
+  show('Removed (no longer shipped)', stale);
   show('New symlinks', links.linked);
+  show('Removed symlinks', prunedLinks);
   console.log(`\n  ${managed.unchanged.length} file(s) already up to date.`);
 
   if (dryRun) {
     console.log('\n  Dry run — no files written.\n');
     return;
   }
-  writeConfig(target, { ...config, version: PKG.version, agents, ticketSystem, ticketSupported: ticket.supported });
+  writeConfig(target, {
+    ...config, version: PKG.version, agents, ticketSystem, ticketSupported: ticket.supported,
+    managedFiles: managedFileList(ticket),
+  });
   if (links.errors.length) {
     console.log(`\n  Errors (${links.errors.length}):`);
     for (const e of links.errors) console.log(`    ! ${e}`);

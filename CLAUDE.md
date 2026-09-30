@@ -48,7 +48,9 @@ Two moving parts: the installer (`bin/init.js`) and the asset payload (`template
 
 ### Config
 
-`.sdd-toolkit.json` in the consumer repo records `{ version, agents, ticketSystem }`. `update` reads it to know which agents/ticket system to refresh and reports the `old -> new` version.
+`.sdd-toolkit.json` in the consumer repo records `{ version, agents, ticketSystem, ticketSupported, managedFiles }`. `update` reads it to know which agents/ticket system to refresh and reports the `old -> new` version.
+
+`managedFiles` is the list of toolkit-owned files (paths under `ai-specs/`) the last install wrote. On `update`, `removeStale` deletes any listed file the current template no longer ships, and `pruneSymlinks` drops the `.claude/` links left dangling — so **renaming or removing a managed asset is safe**: just rename/delete it under `template/`. Only files in that list are ever deleted; consumer-added files in `ai-specs/` are never touched. Configs from before `managedFiles` existed (≤ 0.6.0) fall back to `LEGACY_REMOVED` in `init.js` — the hand-kept list of assets removed before the manifest; it needs no new entries.
 
 ### The shipped workflow (context for editing the assets)
 

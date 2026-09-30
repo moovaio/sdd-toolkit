@@ -9,7 +9,7 @@ Rebuild what you did on a given day — typically the last working day, when it'
 Friday is a blur — from the two places it actually left a trace: **git history** and the
 **ticket system**. The output is a short summary to read out at the daily, not a changelog.
 
-**Input**: optionally a date, `YYYY-MM-DD` (`/tasks 2026-09-25`). With no argument, use the
+**Input**: optionally a date, `YYYY-MM-DD` (`/daily 2026-09-25`). With no argument, use the
 **previous working day** relative to today (Monday → the previous Friday; Saturday/Sunday →
 Friday; otherwise yesterday). The window is that whole local day: `D 00:00` to `D+1 00:00`.
 

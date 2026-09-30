@@ -20,7 +20,7 @@ pull updates centrally when the toolkit changes.
 |----------|--------|
 | **Agents** | `spec-reviewer` — independent reviewer of an OpenSpec change (the plan), run by default; `code-reviewer` — independent reviewer of the implementation diff (the code), suggested and run on request |
 | **Skills** | `openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-explore`, `sdd-usage-report` (measured time/token/dollar cost of a session or cycle) |
-| **Commands** | `/ticket` (idea → grounded draft → create ticket), `/implement` (ticket → branch → OpenSpec → spec review → code → suggested code review), `/usage-report` (what a cycle cost), `/tasks` (what you did on a day, for the daily), `/opsx:*` |
+| **Commands** | `/ticket` (idea → grounded draft → create ticket), `/implement` (ticket → branch → OpenSpec → spec review → code → suggested code review), `/usage-report` (what a cycle cost), `/daily` (what you did on a day, for the daily), `/opsx:*` |
 | **Tickets** | Per-system profile + template. Natively supported: `jira`, `trello` (default: `jira`). Any other value installs a generic fallback you wire up by hand. |
 | **Scaffold** | `openspec/config.yaml` starter (copied once, you fill it in) |
 
@@ -96,12 +96,12 @@ suggestion: if you'd rather keep going in one session, the flow continues withou
 
 ## What you did yesterday
 
-`/tasks` rebuilds a day from git history and the ticket system, as a short summary to read out at
+`/daily` rebuilds a day from git history and the ticket system, as a short summary to read out at
 the daily: what you worked on, what reached dev, what reached production, and tickets you created.
 
 ```bash
-/tasks              # the previous working day (on Monday, the Friday before)
-/tasks 2026-09-25   # a specific day
+/daily              # the previous working day (on Monday, the Friday before)
+/daily 2026-09-25   # a specific day
 ```
 
 It is read-only and covers the current repo. The dev and production branches are configurable in the
@@ -172,7 +172,9 @@ npx github:moovaio/sdd-toolkit update --dry-run  # preview what would change
 ```
 
 `update` reads `.sdd-toolkit.json`, refreshes the **managed** assets, and reports
-`old -> new` version. Your scaffold files and OpenSpec content are never touched.
+`old -> new` version. Managed assets the toolkit no longer ships (renamed or dropped, e.g. `/tasks`
+→ `/daily`) are removed along with their `.claude/` symlinks. Anything you added to `ai-specs/`
+yourself, your scaffold files and OpenSpec content are never touched.
 
 ## How it works
 
@@ -181,9 +183,11 @@ npx github:moovaio/sdd-toolkit update --dry-run  # preview what would change
 - **Tool dirs** (`.claude/`) are **symlinks** into `ai-specs/`, so updating the real file
   updates what every agent tool reads. No duplication.
 - **Scaffold files** (`openspec/config.yaml`) are copied once and never overwritten.
-- **Config** lives in `.sdd-toolkit.json`: `{ version, agents, ticketSystem, ticketSupported }`.
+- **Config** lives in `.sdd-toolkit.json`: `{ version, agents, ticketSystem, ticketSupported, managedFiles }`.
   `ticketSupported` records whether the chosen ticket system shipped with the toolkit; it is what
   makes `update` overwrite a supported system's profile but leave a hand-filled fallback alone.
+  `managedFiles` lists the toolkit-owned files installed, so `update` knows which ones to remove
+  when a later version stops shipping them.
 
 ```
 your-repo/
