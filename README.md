@@ -18,9 +18,9 @@ pull updates centrally when the toolkit changes.
 
 | Category | Assets |
 |----------|--------|
-| **Agents** | `spec-reviewer` — independent reviewer of an OpenSpec change (the plan), run by default; `code-reviewer` — independent reviewer of the implementation diff (the code), suggested and run on request |
+| **Agents** | `spec-reviewer` — independent reviewer of an OpenSpec change (the plan), run by default; `code-reviewer` — independent reviewer of the implementation diff (the code), suggested and run on request, and the criteria `/review-pr` applies to an existing PR |
 | **Skills** | `openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-explore`, `sdd-usage-report` (measured time/token/dollar cost of a session or cycle) |
-| **Commands** | `/ticket` (idea → grounded draft → create ticket), `/implement` (ticket → branch → OpenSpec → spec review → code → suggested code review), `/usage-report` (what a cycle cost), `/daily` (what you did on a day, for the daily), `/opsx:*` |
+| **Commands** | `/ticket` (idea → grounded draft → create ticket), `/implement` (ticket → branch → OpenSpec → spec review → code → suggested code review), `/usage-report` (what a cycle cost), `/daily` (what you did on a day, for the daily), `/review-pr` (independent review of an existing GitHub PR, by Claude or another AI CLI), `/opsx:*` |
 | **Tickets** | Per-system profile + template. Natively supported: `jira`, `trello` (default: `jira`). Any other value installs a generic fallback you wire up by hand. |
 | **Scaffold** | `openspec/config.yaml` starter (copied once, you fill it in) |
 
@@ -117,6 +117,34 @@ Without that note it defaults to the first existing of `dev`/`develop`/`developm
 `master`/`main`/`production`, and offers to record what it found. The ticket query comes from the "Listing recent activity" section of `ai-specs/ticket-system.md` —
 without one, the summary is from git alone.
 
+## Reviewing an existing PR
+
+`/review-pr` reviews a pull request that is already on GitHub — yours or a teammate's, from
+`/implement` or not — with the same criteria as `code-reviewer`. It checks the PR's head out in a
+throwaway worktree (your branch and working tree are untouched), reviews the diff against the
+approved OpenSpec change if the PR has one, or against the PR description if not, and shows the
+report. Posting it to the PR (summary, or summary + inline comments) is offered, never automatic,
+and always as a plain comment — it never approves or requests changes.
+
+```bash
+/review-pr 123                    # a PR by number (or URL)
+/review-pr                        # the PR of the current branch
+/review-pr 123 --reviewer=codex   # a different reviewer, this run only
+```
+
+Requires the `gh` CLI, authenticated. **Claude reviews by default.** For a second opinion from a
+different model, set the reviewer in the repo's `CLAUDE.md` / `AGENTS.md`:
+
+```markdown
+## PR review
+- reviewer: `codex`
+```
+
+Known values are `claude`, `codex`, `gemini` and `cursor` (that CLI must be installed); any other
+value is run as a shell command that reads the prompt on stdin. External CLIs run read-only in the
+throwaway worktree, and if the configured one isn't available, `/review-pr` asks before falling back
+to Claude.
+
 ## What a cycle costs
 
 `/usage-report` measures it from the Claude Code transcripts on disk — wall-clock time, model
@@ -195,7 +223,7 @@ your-repo/
     agents/{spec-reviewer.md,code-reviewer.md}
     skills/openspec-*/
     skills/sdd-usage-report/    # SKILL.md + report.py
-    commands/{ticket.md,implement.md,usage-report.md,tasks.md,opsx/*}
+    commands/{ticket.md,implement.md,usage-report.md,daily.md,review-pr.md,opsx/*}
     ticket-template.md         # resolved from the chosen ticket system
   .claude/                     # symlinks -> ai-specs/
     agents/…  skills/…  commands/…
