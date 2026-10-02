@@ -19,7 +19,7 @@ pull updates centrally when the toolkit changes.
 | Category | Assets |
 |----------|--------|
 | **Agents** | `spec-reviewer` — independent reviewer of an OpenSpec change (the plan), run by default; `code-reviewer` — independent reviewer of the implementation diff (the code), suggested and run on request, and the criteria `/review-pr` applies to an existing PR |
-| **Skills** | `openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-explore`, `sdd-usage-report` (measured time/token/dollar cost of a session or cycle) |
+| **Skills** | `openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-explore`, `sdd-usage-report` (measured time/token/dollar cost of a session or cycle), `sonar-check` (predicts the SonarQube Cloud quality gate before you push) |
 | **Commands** | `/ticket` (idea → grounded draft → create ticket), `/implement` (ticket → branch → OpenSpec → spec review → code → suggested code review), `/usage-report` (what a cycle cost), `/daily` (what you did on a day, for the daily), `/review-pr` (independent review of an existing GitHub PR, by Claude or another AI CLI), `/opsx:*` |
 | **Tickets** | Per-system profile + template. Natively supported: `jira`, `trello` (default: `jira`). Any other value installs a generic fallback you wire up by hand. |
 | **Scaffold** | `openspec/config.yaml` starter (copied once, you fill it in) |
@@ -145,6 +145,41 @@ value is run as a shell command that reads the prompt on stdin. External CLIs ru
 throwaway worktree, and if the configured one isn't available, `/review-pr` asks before falling back
 to Claude.
 
+## Predicting the Sonar gate
+
+`sonar-check` predicts the SonarQube Cloud quality-gate verdict for the current diff (or a PR)
+before you push. Ask for it in plain words ("will Sonar pass?") or run `/sonar-check [<PR>]`.
+
+```bash
+/sonar-check          # the current branch against the branch its PR targets
+/sonar-check 123      # an existing PR
+```
+
+Duplication — the condition that fails most gates — is **measured**, not guessed:
+`duplication.py` tokenizes the whole project like Sonar's copy-paste index and counts the
+diff's added lines that fall in a duplicated block. Bugs, vulnerabilities, hotspots and smells
+come from reading the diff against a rule catalog. After the push, `sonar.py gate <PR>` reads
+the real verdict to compare.
+
+Requires `python3` (and `php` for PHP repos). Reading SonarCloud needs a token in `$SONAR_TOKEN`
+or `~/.config/sonar/token`; an organization token is enough. The organization and project key
+come from `sonar-project.properties` or, failing that, from the `origin` remote
+(`<owner>` / `<owner>_<repo>`, SonarCloud's default for GitHub projects). Override them, or pin
+the duplication parameters a repo calibrated, with a note in `CLAUDE.md` / `AGENTS.md`:
+
+```markdown
+## Sonar
+- project: `myorg_my-repo`
+- organization: `myorg`
+- duplication: `--min-tokens 95 --min-lines 10 --langs php,groovy`
+```
+
+What makes it accurate for a specific repo is that repo's own evidence, kept in
+`ai-specs/sonar/rules.md` (the rules that really fire there, and what's deliberate) and
+`ai-specs/sonar/calibration.md` (real vs. estimated duplication per PR). Those files are the
+repo's, never written by `update`; `sonar.py history` produces the data for both, and the skill
+offers to build them the first time it runs without them.
+
 ## What a cycle costs
 
 `/usage-report` measures it from the Claude Code transcripts on disk — wall-clock time, model
@@ -223,6 +258,8 @@ your-repo/
     agents/{spec-reviewer.md,code-reviewer.md}
     skills/openspec-*/
     skills/sdd-usage-report/    # SKILL.md + report.py
+    skills/sonar-check/         # SKILL.md + rules.md + scripts/
+    sonar/                      # optional, yours: rules.md + calibration.md
     commands/{ticket.md,implement.md,usage-report.md,daily.md,review-pr.md,opsx/*}
     ticket-template.md         # resolved from the chosen ticket system
   .claude/                     # symlinks -> ai-specs/
