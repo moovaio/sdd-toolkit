@@ -21,6 +21,14 @@ are SonarPHP's; most have a same-numbered twin in the other Sonar analyzers (`ja
   resolve the value to something the tool itself produced (e.g. `git rev-parse --verify
   --end-of-options <ref>^{commit}`) and pass only that.
 
+  What the taint analysis accepts as a guard, learned the hard way: a `startswith("-")` and/or
+  regex check followed by an exit, **written inline on the variable that reaches the command**.
+  It does not see validation done inside an argparse `type=` function, it keeps tracing through a
+  `subprocess` call's output, and a guard skipped on some path (`if x is not None and …`) counts
+  as no guard on that path — assign the safe literal there instead. Even then it can keep finding
+  one more path. Once the value is provably sanitized, stop restructuring and have someone mark
+  the issue **Safe** in SonarCloud with the justification: that is what the transition is for.
+
 ### Security hotspots — fail `new_security_hotspots_reviewed` until reviewed
 
 Code that *might* be a risk and needs a human to mark it safe in Sonar: regexes vulnerable to

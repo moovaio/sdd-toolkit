@@ -53,6 +53,8 @@ LANGS = {
 }
 DEFAULT_LANGS = ("php", "groovy", "js", "sql")
 
+SHA = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
+
 GENERIC_TOKEN = re.compile(
     r'''"[^"\n]*"|\'[^\'\n]*\'|[A-Za-z_]\w*|\d+(?:\.\d+)?|\S''', re.ASCII
 )
@@ -96,7 +98,7 @@ def commit(ref):
         ["git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}"],
         capture_output=True, text=True, check=False,
     ).stdout.strip()
-    if not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", sha):
+    if not SHA.fullmatch(sha):
         raise argparse.ArgumentTypeError(f"not a commit in this repo: {ref}")
     return sha
 
@@ -346,22 +348,34 @@ def main():
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
+    # commit() already resolved both refs; the guard is repeated here, next to
+    # the git calls, because that is where SonarCloud's taint analysis looks
+    # for it (pythonsecurity:S8705).
+    base = args.base
+    if base.startswith("-") or not SHA.fullmatch(base):
+        sys.exit("--base must resolve to a commit SHA")
+    head = None
+    if args.head is not None:
+        head = args.head
+        if head.startswith("-") or not SHA.fullmatch(head):
+            sys.exit("--head must resolve to a commit SHA")
+
     extensions = tuple(
         ext for group in args.langs.split(",") if group.strip()
         for ext in LANGS.get(group.strip(), ())
     )
-    files = changed_files(args.base, args.head, extensions)
+    files = changed_files(base, head, extensions)
     if not files:
         print("No added or modified files the index tokenizes in the diff.")
         return 0
 
-    all_added = added_lines(args.base, args.head)
+    all_added = added_lines(base, head)
     # Only the files Sonar tokenizes count toward new_lines.
     new_lines_map = {f: all_added.get(f, set()) for f in files}
 
-    index = project_files(args.head, extensions)
+    index = project_files(head, extensions)
     with tempfile.TemporaryDirectory() as workdir:
-        corpus = tokenize(materialize(args.head, index, workdir))
+        corpus = tokenize(materialize(head, index, workdir))
 
     duplicated, blocks = find_duplicates(corpus, args.min_tokens, args.min_lines)
     # A duplication between two untouched files is pre-existing debt, not this PR's.
