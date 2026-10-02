@@ -14,6 +14,12 @@ are SonarPHP's; most have a same-numbered twin in the other Sonar analyzers (`ja
 - **Injection**: SQL, shell commands or paths built by concatenating request input.
 - **Hard-coded secrets** (`S2068`, `S6418`): passwords, tokens, API keys as literals.
 - **Unsafe deserialization**: `unserialize`, `pickle.loads`, `yaml.load` on input.
+- **Command argument injection** (`pythonsecurity:S8705` and siblings): a CLI argument passed
+  straight into a `subprocess`/`exec` argument list. Even without a shell, a value starting with
+  `-` is read as an option (`git diff --output=<path>` writes a file). Sonar flags it on tooling
+  scripts too — a helper that receives refs or paths from an agent is exactly its target. Fix:
+  resolve the value to something the tool itself produced (e.g. `git rev-parse --verify
+  --end-of-options <ref>^{commit}`) and pass only that.
 
 ### Security hotspots — fail `new_security_hotspots_reviewed` until reviewed
 

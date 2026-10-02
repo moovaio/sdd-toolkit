@@ -118,6 +118,11 @@ file that clones an untouched one still counts.
 Read the repo's `ai-specs/sonar/rules.md` if it exists, and the generic `rules.md` next to this
 file. Then read the diff and look for those rules, in this priority:
 
+Review **every file in the diff Sonar analyzes**, not only the languages `duplication.py`
+indexes: scripts, CI files and tooling count as new code too. Mind one default that surprises
+people: Sonar skips hidden directories (`.claude/`, `.github/`…), so **moving files out of a
+hidden directory exposes them to analysis for the first time** — read them as if they were new.
+
 1. **New bugs and vulnerabilities** — either one fails the gate.
 2. **Security hotspots** — the gate requires all of them reviewed, so a new one fails it until
    someone marks it in Sonar.

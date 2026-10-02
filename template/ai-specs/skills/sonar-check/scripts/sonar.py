@@ -115,7 +115,7 @@ def bail(data):
     return False
 
 
-def gate(org, project, pr):
+def gate(project, pr):
     data = call(f"qualitygates/project_status?projectKey={project}&pullRequest={pr}")
     if bail(data):
         return 1
@@ -149,7 +149,7 @@ def issues(org, project, pr):
     return 0
 
 
-def hotspots(org, project, pr):
+def hotspots(project, pr):
     data = call(f"hotspots/search?projectKey={project}&pullRequest={pr}&ps=100")
     if data.get("errors", [{}])[0].get("msg") == "HTTP 404":
         print("  The organization token cannot reach hotspots/search (404). The condition's")
@@ -170,7 +170,7 @@ def hotspots(org, project, pr):
     return 0
 
 
-def prs(org, project):
+def prs(project):
     data = call(f"project_pull_requests/list?project={project}")
     if bail(data):
         return 1
@@ -275,14 +275,14 @@ def main():
         print(f"organization={org} project={project}")
         return 0
     if args.command == "prs":
-        return prs(org, project)
+        return prs(project)
     if args.command == "history":
         return history(org, project, args.last, args.json)
     if not args.pr:
         ap.error(f"{args.command} needs a PR number")
-    return {"gate": gate, "issues": issues, "hotspots": hotspots}[args.command](
-        org, project, args.pr
-    )
+    if args.command == "issues":
+        return issues(org, project, args.pr)
+    return {"gate": gate, "hotspots": hotspots}[args.command](project, args.pr)
 
 
 if __name__ == "__main__":

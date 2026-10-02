@@ -49,11 +49,12 @@ LANGS = {
     "yaml": (".yml", ".yaml"),
     "json": (".json",),
     "sql": (".sql",),
+    "python": (".py",),
 }
 DEFAULT_LANGS = ("php", "groovy", "js", "sql")
 
 GENERIC_TOKEN = re.compile(
-    r'''"[^"\n]*"|\'[^\'\n]*\'|[A-Za-z_][A-Za-z0-9_]*|[0-9]+(?:\.[0-9]+)?|\S'''
+    r'''"[^"\n]*"|\'[^\'\n]*\'|[A-Za-z_]\w*|\d+(?:\.\d+)?|\S''', re.ASCII
 )
 
 
@@ -61,7 +62,7 @@ def matches(path, extensions):
     return path.endswith(extensions) or os.path.basename(path) in extensions
 
 
-def tokenize_generic(real_path, label):
+def tokenize_generic(real_path):
     """
     Line-aware tokenizer for the languages we do not have a real parser for.
 
@@ -80,6 +81,24 @@ def tokenize_generic(real_path, label):
                 tok = "$LIT"
             out.append((lineno, tok))
     return out
+
+
+def commit(ref):
+    """
+    Resolve a user-supplied ref to the commit SHA git itself reports.
+
+    Only that SHA ever reaches a git command line, so a value such as
+    `--output=<path>` can never be read as an option instead of a revision.
+    """
+    if ref.startswith("-"):
+        raise argparse.ArgumentTypeError(f"not a revision: {ref}")
+    sha = subprocess.run(
+        ["git", "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}"],
+        capture_output=True, text=True, check=False,
+    ).stdout.strip()
+    if not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", sha):
+        raise argparse.ArgumentTypeError(f"not a commit in this repo: {ref}")
+    return sha
 
 
 def sh(args, cwd=None):
@@ -178,7 +197,7 @@ def tokenize(path_map):
         if label.endswith(".php"):
             php_map[label] = real
         else:
-            toks = tokenize_generic(real, label)
+            toks = tokenize_generic(real)
             if toks:
                 corpus[label] = toks
     if not php_map:
@@ -317,8 +336,8 @@ def merge_blocks(blocks, new_lines_map):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base", required=True)
-    ap.add_argument("--head", default=None)
+    ap.add_argument("--base", required=True, type=commit)
+    ap.add_argument("--head", default=None, type=commit)
     ap.add_argument("--min-tokens", type=int, default=95)
     ap.add_argument("--min-lines", type=int, default=10)
     ap.add_argument("--threshold", type=float, default=3.0)
