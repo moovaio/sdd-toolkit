@@ -16,7 +16,8 @@ re-running the installer with a different `--tickets=<system>`; add a system by 
 
 ## Reading a ticket (Trello REST API)
 
-Trello has no first-party Claude MCP connector, so read the card through the **Trello REST API** with `curl`.
+Read the card through the **Trello REST API** with `curl`. (Trello has an official MCP server,
+`mcp.trello.com`, but this profile doesn't use it yet: it has no action history, which `/daily` needs.)
 It needs a personal API key and token, supplied as environment variables `TRELLO_API_KEY` and `TRELLO_TOKEN`:
 
 - Generate them once at <https://trello.com/power-ups/admin> (API key) and an authorized token; export both in
