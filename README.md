@@ -104,8 +104,18 @@ the daily: what you worked on, what reached dev, what reached production, and ti
 /daily 2026-09-25   # a specific day
 ```
 
-It is read-only and covers the current repo. The dev and production branches are configurable in the
-repo's `CLAUDE.md` / `AGENTS.md`:
+It is read-only. It covers the current repo plus any listed in a "Daily repos" note — in the
+repo's `CLAUDE.md` / `AGENTS.md`, or in a personal `CLAUDE.local.md` / `~/.claude/CLAUDE.md`, since
+which repos you touch is often personal. Paths are relative to the repo root; a listed repo that
+isn't cloned on this machine is skipped and mentioned, not an error:
+
+```markdown
+## Daily repos
+- `../api_go`
+- `../web-app`
+```
+
+Each repo's dev and production branches are configurable in that repo's `CLAUDE.md` / `AGENTS.md`:
 
 ```markdown
 ## Environment branches
@@ -114,7 +124,7 @@ repo's `CLAUDE.md` / `AGENTS.md`:
 ```
 
 Without that note it defaults to the first existing of `dev`/`develop`/`development`/`staging` and
-`master`/`main`/`production`, and offers to record what it found. The ticket query comes from the "Listing recent activity" section of `ai-specs/ticket-system.md` —
+`master`/`main`/`production`, and offers to record what it found (in the current repo only). The ticket query comes from the "Listing recent activity" section of `ai-specs/ticket-system.md` —
 without one, the summary is from git alone.
 
 ## Reviewing an existing PR
